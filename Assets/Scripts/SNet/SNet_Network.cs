@@ -334,7 +334,6 @@ public class SNet_Network
             Debug.Log(steamid + " " + text);
         };
 
-        SNet_Auth.Init();
         SNet_Controller.list.Clear();
     }
 
@@ -416,19 +415,10 @@ public class SNet_Network
 
         int membersLength = members.Length;
 
-        bool validationRequired = false;
-        if (message.n != "Auth_H")
-        {
-            validationRequired = true;
-        }
-
         data = CLZF2.Compress(data);
 
         for (int i = 0; i < membersLength; i++)
         {
-            if (!SNet_Auth.current.validatedIds.Contains(members[i]) && validationRequired)
-                continue; // Skip this user. Hes not validated.
-
             Client.Instance.Networking.SendP2PPacket(members[i], data, data.Length, type, channel);
         }
     }

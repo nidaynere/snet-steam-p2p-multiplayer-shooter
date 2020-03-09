@@ -32,7 +32,6 @@ public class SNet_Manager : MonoBehaviour
 
         if (instance != null)
         {
-            SNet_Auth.Init();
             Destroy(gameObject);
             return;
         }
@@ -108,9 +107,6 @@ public class SNet_Manager : MonoBehaviour
         int hostCount = 0;
         foreach (ulong m in members)
         {
-            if (SNet_Auth.current.validatedIds.Contains(Client.Instance.SteamId) && !SNet_Auth.current.validatedIds.Contains(m))
-                continue;
-
             if (Client.Instance.Lobby.GetMemberData(m, "host") == "true")
             {
                 Debug.Log("Current host received = " + m + ", my steamid: " + Client.Instance.SteamId);
@@ -162,17 +158,6 @@ public class SNet_Manager : MonoBehaviour
     }
 
     /// <summary>
-    /// Wait for ticket response.
-    /// </summary>
-    [HideInInspector]
-    public float nextAuthCheck = 0;
-    /// <summary>
-    /// Clean blacklist after a while.
-    /// </summary>
-    [HideInInspector]
-    public float nextQueryClean = 0;
-
-    /// <summary>
     /// There may be a new connection or disconnection.
     /// </summary>
     public void MemberUpdate()
@@ -184,14 +169,6 @@ public class SNet_Manager : MonoBehaviour
         }
 
         List<ulong> members = Client.Instance.Lobby.GetMemberIDs().ToList();
-
-        //Clear old validated auths
-        List<ulong> _temp = SNet_Auth.current.validatedIds.FindAll(x => !members.Contains(x));
-        foreach (ulong i in _temp)
-        {
-            SNet_Auth.current.validatedIds.Remove(i);
-            SNet_Auth.current.query.Remove(i);
-        }
 
         int lobbyC = members.Count;
         if (memberCount != lobbyC)
@@ -207,10 +184,7 @@ public class SNet_Manager : MonoBehaviour
 
             if (HostRequired(members))
             { // Assign new host.
-                if (SNet_Auth.current.validatedIds.Count > 0 && SNet_Auth.authed)
-                    SNet_Network.currentHost = SNet_Auth.current.validatedIds[0];
-                else
-                    SNet_Network.currentHost = members[0];
+                SNet_Network.currentHost = members[0];
                 UI_UpdateHost();
             }
 
@@ -235,34 +209,6 @@ public class SNet_Manager : MonoBehaviour
         if (SNet_Network.instance.isHost()) // Update the game status for possible new members
         {
             SNet_Network.Game_Status.Update_Game_Status(gameStatus.iS, gameStatus.l);
-
-            if (nextAuthCheck < Time.time)
-            {
-                foreach (ulong i in members)
-                {
-                    if (!SNet_Auth.current.validatedIds.Contains(i) && !SNet_Auth.current.query.Contains(i))
-                    {
-                        Debug.Log("Auth needed: " + i);
-                        SNet_Auth.current.query.Add(i);
-                        nextAuthCheck = Time.time + 5;
-                        nextQueryClean = Time.time + 30;
-                        // we are the host and the player has not authed yet.
-                        if (SNet_Auth.ticket != null) // Release the current ticket
-                            SNet_Auth.ticket.Cancel();
-
-                        SNet_Auth.ticket = Client.Instance.Auth.GetAuthSessionTicket();
-                        /// Send the ticket to that connection.
-                        SNet_Network.instance.Send_Message (new SNet_Auth.Auth_H(SNet_Auth.ticket.Data), i);
-                    }
-                }
-            }
-        }
-
-        ///Clean the auth query
-        if (nextQueryClean != 0 && nextQueryClean < Time.time)
-        {
-            nextQueryClean = 0;
-            SNet_Auth.current.query.Clear();
         }
     }
 
@@ -367,11 +313,6 @@ public class SNet_Manager : MonoBehaviour
     {
         Debug.Log("OnLobbyLeave()");
 
-        SNet_Auth.current.validatedIds.Clear();
-        SNet_Auth.current.query.Clear();
-        nextAuthCheck = 0;
-        nextQueryClean = 0;
-        SNet_Auth.authed = false;
         SNet_Network.currentHost = 0;
         memberCount = 0;
         panel_Game.Open(false);
@@ -428,10 +369,7 @@ public class SNet_Manager : MonoBehaviour
             t.Find("name").GetComponent<Text>().text = alias;
             i++;
 
-            if (SNet_Auth.current.validatedIds.Contains(id))
-            {
-                SNet_Auth.Validate(id);
-            }
+            SNet_Auth.Validate(id);
 
             if (memberCount > 0)
             {

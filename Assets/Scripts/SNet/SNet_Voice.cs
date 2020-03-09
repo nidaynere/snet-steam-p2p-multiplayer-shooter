@@ -78,7 +78,8 @@ public class SNet_Voice : MonoBehaviour
                 g.SetActive(voiceDisable);
         }
 
-        lobbyPlayer.Find("speaking").GetComponent<UIVisibility>().Open();
+        if (lobbyPlayer.gameObject.activeInHierarchy)
+            lobbyPlayer.Find("speaking").GetComponent<UIVisibility>().Open();
 
         if (voiceDisable)
             return;

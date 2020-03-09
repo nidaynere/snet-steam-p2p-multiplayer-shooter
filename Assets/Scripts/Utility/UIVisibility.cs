@@ -60,13 +60,14 @@ public class UIVisibility : MonoBehaviour
 
         if (show) 
 		{
+            gameObject.SetActive(true);
+
             if (hideIn != 0)
             {
                 CancelInvoke();
                 MonoBehaviourExtensions.Invoke(this, Close, hideIn);
             }
 
-            gameObject.SetActive (true);
 			alphaDown = 1;
 		} 
 		else 
